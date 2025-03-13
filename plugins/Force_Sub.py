@@ -1,27 +1,3 @@
-"""
-Apache License 2.0
-Copyright (c) 2022 @Digital_Botz
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-Telegram Link : https://t.me/Digital_Botz 
-Repo Link : https://github.com/DigitalBotz/Digital-Rename-Bot
-License Link : https://github.com/DigitalBotz/Digital-Rename-Bot/blob/main/LICENSE
-"""
-
 # pyrogram imports
 from pyrogram import Client, filters, enums 
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -32,19 +8,30 @@ from config import Config
 from helper.database import digital_botz
 import datetime 
 
+# Multiple Force Subscription Channels
+FORCE_SUB_CHANNELS = [
+    -1001802883067,  # Replace with your first channel ID
+    -1001788629657,  # Replace with your second channel ID
+    Config.FORCE_SUB_3   # Replace with your third channel ID
+]
+
 async def not_subscribed(_, client, message):
     await digital_botz.add_user(client, message)
-    if not Config.FORCE_SUB:
-        return False
+    
+    if not FORCE_SUB_CHANNELS:
+        return False  # Agar koi channel nahi diya gaya hai to check na kare
 
-    try:
-        user = await client.get_chat_member(Config.FORCE_SUB, message.from_user.id)
-        return user.status not in [enums.ChatMemberStatus.MEMBER, enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
-    except UserNotParticipant:
-        return True
-    except Exception as e:
-        print(f"Error checking subscription: {e}")
-        return False
+    for channel_id in FORCE_SUB_CHANNELS:
+        try:
+            user = await client.get_chat_member(channel_id, message.from_user.id)
+            if user.status not in [enums.ChatMemberStatus.MEMBER, enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]:
+                return True
+        except UserNotParticipant:
+            return True
+        except Exception as e:
+            print(f"Error checking subscription: {e}")
+    
+    return False  # Agar sab channels joined hain to False return kare
 
 async def handle_banned_user_status(bot, message):
     await digital_botz.add_user(bot, message) 
@@ -63,23 +50,13 @@ async def _(bot, message):
     await handle_banned_user_status(bot, message)
     
 @Client.on_message(filters.private & filters.create(not_subscribed))
-async def forces_sub(client, message):
-    buttons = [[InlineKeyboardButton(text="📢 Join Update Channel 📢", url=f"https://t.me/{Config.FORCE_SUB}")]] 
-    text = "**Sᴏʀʀy Dᴜᴅᴇ Yᴏᴜ'ʀᴇ Nᴏᴛ Jᴏɪɴᴇᴅ My Cʜᴀɴɴᴇʟ 😐. Sᴏ Pʟᴇᴀꜱᴇ Jᴏɪɴ Oᴜʀ Uᴩᴅᴀᴛᴇ Cʜᴀɴɴᴇʟ Tᴏ Cᴄᴏɴᴛɪɴᴜᴇ**"
-
-    try:
-        user = await client.get_chat_member(Config.FORCE_SUB, message.from_user.id)
-        if user.status == enums.ChatMemberStatus.BANNED:
-            return await message.reply_text("Sᴏʀʀy Yᴏᴜ'ʀᴇ Bᴀɴɴᴇᴅ Tᴏ Uꜱᴇ Mᴇ")
-        elif user.status not in [enums.ChatMemberStatus.MEMBER, enums.ChatMemberStatus.ADMINISTRATOR]:
-            return await message.reply_text(text=text, reply_markup=InlineKeyboardMarkup(buttons))
-    except UserNotParticipant:
-        return await message.reply_text(text=text, reply_markup=InlineKeyboardMarkup(buttons))
-    return await message.reply_text(text=text, reply_markup=InlineKeyboardMarkup(buttons))
+async def force_sub(client, message):
+    join_buttons = []
     
-# (c) @RknDeveloperr
-# Rkn Developer 
-# Don't Remove Credit 😔
-# Telegram Channel @RknDeveloper & @Rkn_Botz
-# Developer @RknDeveloperr
-# Update Channel @Digital_Botz & @DigitalBotz_Support
+    for idx, channel_id in enumerate(FORCE_SUB_CHANNELS, start=1):
+        channel_link = f"https://t.me/{channel_id}"
+        join_buttons.append([InlineKeyboardButton(text=f"📢 Join Channel {idx} 📢", url=channel_link)])
+
+    text = "**Sᴏʀʀy Dᴜᴅᴇ, Yᴏᴜ'ʀᴇ Nᴏᴛ Jᴏɪɴᴇᴅ Aʟʟ Rᴇǫᴜɪʀᴇᴅ Cʜᴀɴɴᴇʟꜱ 😐. Pʟᴇᴀꜱᴇ Jᴏɪɴ Tʜᴇ ᴍ ᴀʟʟ Tᴏ Cᴏɴᴛɪɴᴜᴇ**"
+
+    return await message.reply_text(text=text, reply_markup=InlineKeyboardMarkup(join_buttons))
